@@ -15,12 +15,25 @@ def pitch_towards_angle(emulator, angle, speed):
     return False
 
 
-def evaluate(descent_angle, max_descent_speed, descent_pitch_speed, ascent_angle, min_ascent_speed, ascent_pitch_speed):
+def denormalize(coefficients):
+    descent_angle =       coefficients[0] * 10 + 45
+    max_descent_speed =   coefficients[1] *  1 +  1
+    descent_pitch_speed = coefficients[2] *  1 +  1
+    ascent_angle =        coefficients[3] * 10 - 45
+    min_ascent_speed =    coefficients[4] *  1 +  1
+    ascent_pitch_speed =  coefficients[5] *  1 +  5
+
+    return descent_angle, max_descent_speed, descent_pitch_speed, ascent_angle, min_ascent_speed, ascent_pitch_speed
+
+
+def evaluate(coefficients):
+    descent_angle, max_descent_speed, descent_pitch_speed, ascent_angle, min_ascent_speed, ascent_pitch_speed = denormalize(coefficients)
     emulator = ElytraEmulator()
 
     is_descending = True
     score = 0
-    altitudes = []
+    x = []
+    y = []
 
     for i in range(1000):
         if is_descending and emulator.speed >= max_descent_speed:
@@ -33,7 +46,10 @@ def evaluate(descent_angle, max_descent_speed, descent_pitch_speed, ascent_angle
         else:
             pitch_towards_angle(emulator, ascent_angle, ascent_pitch_speed)
 
-        score += emulator.position.y
-        altitudes.append(emulator.position.y)
+        emulator.tick()
 
-    return score, altitudes
+        score += emulator.position.y
+        x.append(emulator.position.horizontal_length)
+        y.append(emulator.position.y)
+
+    return score, x, y
