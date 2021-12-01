@@ -2,10 +2,11 @@ import pygad
 import matplotlib.pyplot as plt
 
 from src.controller import evaluate, denormalize
+from src.visualizer import visualize
 
 plt.ion()
 
-num_generations = 20
+num_generations = 100
 num_parents_mating = 7
 
 sol_per_pop = 30
@@ -13,7 +14,7 @@ num_genes = 6
 
 
 def fitness_function(solution, solution_idx):
-    fitness, x, y = evaluate(solution)
+    fitness, _ = evaluate(solution)
     return fitness
 
 
@@ -30,10 +31,7 @@ def callback_generation(ga_instance):
     print("Denormalized : {coefficients}".format(coefficients=denormalize(best_coefficients)))
     print("")
 
-    _, x, y = evaluate(best_coefficients)
-    plt.plot(x, y)
-    plt.draw()
-    plt.pause(0.0001)
+    visualize(best_coefficients)
 
 
 ga_instance = pygad.GA(num_generations=num_generations,
