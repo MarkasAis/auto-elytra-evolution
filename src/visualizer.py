@@ -13,10 +13,14 @@ clock = pygame.time.Clock()
 
 player_scale = 0.1
 player = pygame.image.load("player.png")
-player = pygame.transform.scale(player, (player.get_width()*player_scale, player.get_height()*player_scale))
+player = pygame.transform.scale(player, (player.get_width() * player_scale, player.get_height() * player_scale))
+
+background = pygame.image.load("background.png")
+
+foreground = pygame.Surface((width, height), pygame.SRCALPHA)
 
 
-class UpdateThread (threading.Thread):
+class UpdateThread(threading.Thread):
     def __init__(self, frames_per_second):
         threading.Thread.__init__(self)
         self.frames_per_second = frames_per_second
@@ -42,7 +46,7 @@ def visualize(coefficients, resolution=5):
     vis_positions = []
 
     for i in range(0, len(positions), resolution):
-        vis_positions.append((positions[i][0], height/5 - (height/100)*positions[i][1]))
+        vis_positions.append((positions[i][0], height / 5 - (height / 100) * positions[i][1]))
 
     visualisations.append([0, vis_positions])
 
@@ -69,6 +73,10 @@ def blitRotate(surf, image, pos, originPos, angle):
     # pygame.draw.rect(surf, (255, 0, 0), (*rotated_image_rect.topleft, *rotated_image.get_size()), 2)
 
 
+def clamp(value, min_value, max_value):
+    return max(min_value, min(value, max_value))
+
+
 def update():
     # print("tick")
 
@@ -76,30 +84,31 @@ def update():
         if event.type == pygame.QUIT:
             sys.exit()
 
-    screen.fill((255, 255, 255))
+    # screen.fill((255, 255, 255))
 
-    for vis in visualisations:
-        tick, positions = vis
+    screen.blit(background, (0, 0))
+
+    foreground.fill((0, 0, 0, 0))
+
+    for i in range(len(visualisations) - 1, -1, -1):
+        tick, positions = visualisations[i]
 
         num_positions = min(len(positions), tick)
         in_progress = num_positions < len(positions)
 
-        if in_progress:
-            color = (255, 0, 0)
-        else:
-            v = min(255, tick / 1000 * 255 + 100)
-            color = (v, v, v)
+        alpha = clamp(1 - (tick - len(positions)) * 0.01, 0, 1) * 200
+        color = (255, 255, 255, alpha)
 
-            if v >= 255:
-                visualisations.remove(vis)
-                continue
+        if alpha <= 0:
+            visualisations.remove(visualisations[i])
+            continue
 
         if num_positions > 1:
-            pygame.draw.lines(screen, color, False, positions[0:num_positions], 3)
+            pygame.draw.lines(foreground, color, False, positions[0:num_positions], 2)
 
             if in_progress:
-                prev_pos = positions[num_positions-2]
-                cur_pos = positions[num_positions-1]
+                prev_pos = positions[num_positions - 2]
+                cur_pos = positions[num_positions - 1]
                 # screen.blit(player, last_pos)
 
                 dx = prev_pos[0] - cur_pos[0]
@@ -107,9 +116,14 @@ def update():
 
                 angle = 90 - math.atan2(dy, dx) * 180 / math.pi
 
-                blitRotate(screen, player, cur_pos, (player.get_width()/2, player.get_height()/2), angle)
+                blitRotate(foreground, player, cur_pos, (player.get_width() / 2, player.get_height() / 2), angle)
 
-        vis[0] += 1
+        visualisations[i][0] += 1
+
+    # draw_polygon_alpha(screen, (255, 255, 0, 127),
+    #                    [(100, 10), (100 + 0.8660 * 90, 145), (100 - 0.8660 * 90, 145)])
+
+    screen.blit(foreground, (0, 0))
 
     pygame.display.flip()
 
