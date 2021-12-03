@@ -1,5 +1,6 @@
 import threading
 import time
+from random import random
 
 import numpy as np
 from geneticalgorithm import geneticalgorithm as ga
@@ -7,13 +8,24 @@ from geneticalgorithm import geneticalgorithm as ga
 from src.controller import evaluate
 import src.visualizer as vis
 
+best_fitness = -99999
+
 
 def f(solution):
-    # return np.sum(X)
-    vis.visualize(solution)
+    global best_fitness
+
+    if random() < 0.02:
+        vis.visualize(solution)
+
     fitness, _ = evaluate(solution)
-    time.sleep(0.01)
-    return fitness
+
+    if fitness > best_fitness:
+        print(fitness)
+        best_fitness = fitness
+
+        vis.visualize(solution)
+
+    return -fitness
 
 
 varbound = np.array([[0, 90], [0, 10], [0, 10], [-90, 0], [1, 10], [1, 10]])

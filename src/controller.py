@@ -1,5 +1,7 @@
 import math
 
+from sklearn.linear_model import LinearRegression
+
 from src.emulator import ElytraEmulator
 
 
@@ -32,12 +34,9 @@ def evaluate(coefficients):
     emulator = ElytraEmulator()
 
     is_descending = True
-    score = 0
     positions = []
 
-    max_y = 0
-
-    for i in range(1000):
+    for i in range(1500):
         if is_descending and emulator.speed >= max_descent_speed:
             is_descending = False
         elif not is_descending and emulator.speed <= min_ascent_speed:
@@ -50,12 +49,15 @@ def evaluate(coefficients):
 
         emulator.tick()
 
-        max_y = max(max_y, emulator.position.y)
-
-        score -= emulator.position.y
         x = emulator.position.horizontal_length
         y = emulator.position.y
         positions.append((x, y))
 
+    X = [[p[0]] for p in positions]
+    Y = [p[1] for p in positions]
+
+    reg = LinearRegression().fit(X, Y)
+    fitness = reg.coef_[0]
+
     # return max_y*1000+score, positions
-    return score, positions
+    return fitness, positions
