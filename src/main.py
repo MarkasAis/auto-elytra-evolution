@@ -1,3 +1,5 @@
+import time
+
 import pygad
 import matplotlib.pyplot as plt
 
@@ -9,11 +11,12 @@ plt.ion()
 num_generations = 100
 num_parents_mating = 7
 
-sol_per_pop = 30
+sol_per_pop = 50
 num_genes = 6
 
 
 def fitness_function(solution, solution_idx):
+    # visualize(solution)
     fitness, _ = evaluate(solution)
     return fitness
 
@@ -32,6 +35,7 @@ def callback_generation(ga_instance):
     print("")
 
     visualize(best_coefficients)
+    # time.sleep(5)
 
 
 ga_instance = pygad.GA(num_generations=num_generations,
@@ -40,8 +44,8 @@ ga_instance = pygad.GA(num_generations=num_generations,
                        sol_per_pop=sol_per_pop,
                        num_genes=num_genes,
                        on_generation=callback_generation,
-                       init_range_low=-0.5,
-                       init_range_high=0.5,
+                       init_range_low=-1,
+                       init_range_high=1,
                        random_mutation_min_val=-0.15,
                        random_mutation_max_val=0.15)
 
