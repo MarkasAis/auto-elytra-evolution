@@ -1,73 +1,50 @@
+import threading
 import time
 
-import pygad
-import matplotlib.pyplot as plt
+import numpy as np
+from geneticalgorithm import geneticalgorithm as ga
 
-from src.controller import evaluate, denormalize
-from src.visualizer import visualize
-
-plt.ion()
-
-num_generations = 100
-num_parents_mating = 7
-
-sol_per_pop = 50
-num_genes = 6
+from src.controller import evaluate
+import src.visualizer as vis
 
 
-def fitness_function(solution, solution_idx):
-    # visualize(solution)
+def f(solution):
+    # return np.sum(X)
+    vis.visualize(solution)
     fitness, _ = evaluate(solution)
+    time.sleep(0.01)
     return fitness
 
 
-last_fitness = 0
-def callback_generation(ga_instance):
-    global last_fitness
-    print("Generation   : {generation}".format(generation=ga_instance.generations_completed))
-    print("Fitness      : {fitness}".format(fitness=ga_instance.best_solution()[1]))
-    print("Change       : {change}".format(change=ga_instance.best_solution()[1] - last_fitness))
-    last_fitness = ga_instance.best_solution()[1]
+varbound = np.array([[0, 90], [0, 10], [0, 10], [-90, 0], [1, 10], [1, 10]])
 
-    best_coefficients = ga_instance.best_solution()[0]
-    print("Coefficients : {coefficients}".format(coefficients=best_coefficients))
-    print("Denormalized : {coefficients}".format(coefficients=denormalize(best_coefficients)))
-    print("")
+algorithm_param = {'max_num_iteration': 3000,
+                   'population_size': 100,
+                   'mutation_probability': 0.1,
+                   'elit_ratio': 0.05,
+                   'crossover_probability': 0.5,
+                   'parents_portion': 0.3,
+                   'crossover_type': 'uniform',
+                   'max_iteration_without_improv': None}
 
-    visualize(best_coefficients)
-    # time.sleep(5)
+model = ga(function=f,
+           dimension=6,
+           variable_type='real',
+           variable_boundaries=varbound,
+           algorithm_parameters=algorithm_param)
 
-
-ga_instance = pygad.GA(num_generations=num_generations,
-                       num_parents_mating=num_parents_mating,
-                       fitness_func=fitness_function,
-                       sol_per_pop=sol_per_pop,
-                       num_genes=num_genes,
-                       on_generation=callback_generation,
-                       init_range_low=-1,
-                       init_range_high=1,
-                       random_mutation_min_val=-0.15,
-                       random_mutation_max_val=0.15)
+# model.run()
 
 
-ga_instance.run()
+class GAThread (threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        model.run()
 
 
-# ga_instance.plot_fitness()
-#
-# # Returning the details of the best solution.
-# solution, solution_fitness, solution_idx = ga_instance.best_solution()
-# print("Parameters of the best solution : {solution}".format(solution=solution))
-# print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
-# print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
-#
-# if ga_instance.best_solution_generation != -1:
-#     print("Best fitness value reached after {best_solution_generation} generations.".format(best_solution_generation=ga_instance.best_solution_generation))
-#
-# # Saving the GA instance.
-# filename = 'genetic' # The filename to which the instance is saved. The name is without extension.
-# ga_instance.save(filename=filename)
-#
-# # Loading the saved GA instance.
-# loaded_ga_instance = pygad.load(filename=filename)
-# loaded_ga_instance.plot_fitness()
+ga_thread = GAThread()
+ga_thread.start()
+
+vis.run()

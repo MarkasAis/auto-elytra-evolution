@@ -16,12 +16,12 @@ def pitch_towards_angle(emulator, angle, speed):
 
 
 def denormalize(coefficients):
-    descent_angle = coefficients[0] * 10 + 45
-    max_descent_speed = coefficients[1] * 1 + 1
-    descent_pitch_speed = coefficients[2] * 1 + 1
-    ascent_angle = coefficients[3] * 10 - 45
-    min_ascent_speed = coefficients[4] * 1 + 1
-    ascent_pitch_speed = coefficients[5] * 1 + 5
+    descent_angle = coefficients[0] #* 10 + 45
+    max_descent_speed = coefficients[1] #* 1 + 1
+    descent_pitch_speed = coefficients[2] #* 1 + 1
+    ascent_angle = coefficients[3] #* 10 - 45
+    min_ascent_speed = coefficients[4] #* 1 + 1
+    ascent_pitch_speed = coefficients[5] #* 1 + 5
 
     return descent_angle, max_descent_speed, descent_pitch_speed, ascent_angle, min_ascent_speed, ascent_pitch_speed
 
@@ -34,6 +34,8 @@ def evaluate(coefficients):
     is_descending = True
     score = 0
     positions = []
+
+    max_y = 0
 
     for i in range(1000):
         if is_descending and emulator.speed >= max_descent_speed:
@@ -48,9 +50,12 @@ def evaluate(coefficients):
 
         emulator.tick()
 
-        score += emulator.position.y
+        max_y = max(max_y, emulator.position.y)
+
+        score -= emulator.position.y
         x = emulator.position.horizontal_length
         y = emulator.position.y
         positions.append((x, y))
 
+    # return max_y*1000+score, positions
     return score, positions
