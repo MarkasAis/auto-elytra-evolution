@@ -9,6 +9,8 @@ pygame.init()
 size = width, height = 1000, 1000
 screen = pygame.display.set_mode(size)
 
+layers = [pygame.Surface((width, height), pygame.SRCALPHA) for i in range(2)]
+
 clock = pygame.time.Clock()
 
 player_scale = 0.1
@@ -17,38 +19,112 @@ player = pygame.transform.scale(player, (player.get_width() * player_scale, play
 
 background = pygame.image.load("background.png")
 
-foreground = pygame.Surface((width, height), pygame.SRCALPHA)
+RESOLUTION = 5
+
+best_fitness = -math.inf
 
 
-class UpdateThread(threading.Thread):
-    def __init__(self, frames_per_second):
-        threading.Thread.__init__(self)
-        self.frames_per_second = frames_per_second
-        self.delta_time = 1 / frames_per_second
-        self.active = True
+def lerp(start, end, t):
+    return (end-start) * t + start
 
-    def stop(self):
-        self.active = False
 
-    def run(self):
-        while self.active:
-            update()
-            # time.sleep(self.delta_time)
-            clock.tick(self.frames_per_second)
+def lerp_color(start, end, t):
+    return tuple(lerp(start[i], end[i], t) for i in range(len(start)))
+
+class Visualisation():
+    def __init__(self, coefficients, resolution=5):
+        self.cur_color = None
+        self.cur_width = None
+
+        self.tick = 1
+        self.positions = []
+
+        self.fade_ticks = 50
+
+        self.fitness, positions = evaluate(coefficients)
+        for i in range(0, len(positions), resolution):
+            self.positions.append((positions[i][0], height / 5 - (height / 100) * positions[i][1]))
+
+        global best_fitness
+        if self.fitness > best_fitness:
+            best_fitness = self.fitness
+
+    @property
+    def in_progress(self):
+        return self.tick < len(self.positions)
+
+    @property
+    def is_finished(self):
+        return self.cur_color is not None and self.cur_color[3] <= 5
+
+    @property
+    def is_best(self):
+        return self.fitness >= best_fitness
+
+    def __gt__(self, other):
+        return self.fitness > other.fitness
+
+    def compute_color(self):
+        alpha = clamp(1 - (self.tick - len(self.positions)) / self.fade_ticks, 0, 1) * 200
+
+        if self.is_best:
+            return 255, 50, 150, alpha
+
+        return 255, 255, 255, alpha
+
+    def compute_width(self):
+        return 4 if self.is_best else 2
+
+
+    def update_style(self):
+        # color
+        target_color = self.compute_color()
+        if self.cur_color is None:
+            self.cur_color = target_color
+        self.cur_color = lerp_color(self.cur_color, target_color, 0.05)
+
+        # width
+        target_width = self.compute_width()
+        if self.cur_width is None:
+            self.cur_width = target_width
+        self.cur_width = lerp(self.cur_width, target_width, 0.05)
+
+    def update(self):
+        if self.is_finished:
+            return
+
+        self.update_style()
+
+        num_positions = min(len(self.positions), self.tick)
+        pygame.draw.lines(layers[0], self.cur_color, False, self.positions[0:num_positions + 1], int(self.cur_width))
+
+        if self.in_progress:
+            prev_pos = self.positions[num_positions - 2]
+            cur_pos = self.positions[num_positions - 1]
+
+            dx = prev_pos[0] - cur_pos[0]
+            dy = prev_pos[1] - cur_pos[1]
+            angle = 90 - math.atan2(dy, dx) * 180 / math.pi
+
+            blitRotate(layers[1], player, cur_pos, (player.get_width() / 2, player.get_height() / 2), angle)
+
+        self.tick = self.tick + 1
 
 
 visualisations = []
 
 
-def visualize(coefficients, resolution=5):
-    _, positions = evaluate(coefficients)
-
-    vis_positions = []
-
-    for i in range(0, len(positions), resolution):
-        vis_positions.append((positions[i][0], height / 5 - (height / 100) * positions[i][1]))
-
-    visualisations.append([0, vis_positions])
+def visualize(coefficients):
+    # _, positions = evaluate(coefficients)
+    #
+    # vis_positions = []
+    #
+    # for i in range(0, len(positions), RESOLUTION):
+    #     vis_positions.append((positions[i][0], height / 5 - (height / 100) * positions[i][1]))
+    #
+    # visualisations.append([0, vis_positions])
+    #
+    visualisations.append(Visualisation(coefficients, RESOLUTION))
 
 
 def blitRotate(surf, image, pos, originPos, angle):
@@ -78,52 +154,28 @@ def clamp(value, min_value, max_value):
 
 
 def update():
-    # print("tick")
+    global visualisations
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
 
-    # screen.fill((255, 255, 255))
+    for layer in layers:
+        layer.fill((0, 0, 0, 0))
+
+    cur_visualisations = sorted(visualisations.copy())
+
+    for vis in cur_visualisations:
+        vis.update()
+        if vis.is_finished:
+            visualisations.remove(vis)
+
+    # visualisations = next_visualisations
 
     screen.blit(background, (0, 0))
 
-    foreground.fill((0, 0, 0, 0))
-
-    for i in range(len(visualisations) - 1, -1, -1):
-        tick, positions = visualisations[i]
-
-        num_positions = min(len(positions), tick)
-        in_progress = num_positions < len(positions)
-
-        alpha = clamp(1 - (tick - len(positions)) * 0.01, 0, 1) * 200
-        color = (255, 255, 255, alpha)
-
-        if alpha <= 0:
-            visualisations.remove(visualisations[i])
-            continue
-
-        if num_positions > 1:
-            pygame.draw.lines(foreground, color, False, positions[0:num_positions], 2)
-
-            if in_progress:
-                prev_pos = positions[num_positions - 2]
-                cur_pos = positions[num_positions - 1]
-                # screen.blit(player, last_pos)
-
-                dx = prev_pos[0] - cur_pos[0]
-                dy = prev_pos[1] - cur_pos[1]
-
-                angle = 90 - math.atan2(dy, dx) * 180 / math.pi
-
-                blitRotate(foreground, player, cur_pos, (player.get_width() / 2, player.get_height() / 2), angle)
-
-        visualisations[i][0] += 1
-
-    # draw_polygon_alpha(screen, (255, 255, 0, 127),
-    #                    [(100, 10), (100 + 0.8660 * 90, 145), (100 - 0.8660 * 90, 145)])
-
-    screen.blit(foreground, (0, 0))
+    for layer in layers:
+        screen.blit(layer, (0, 0))
 
     pygame.display.flip()
 

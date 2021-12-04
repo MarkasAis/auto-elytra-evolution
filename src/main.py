@@ -1,5 +1,5 @@
+import math
 import threading
-import time
 from random import random
 
 import numpy as np
@@ -8,10 +8,10 @@ from geneticalgorithm import geneticalgorithm as ga
 from src.controller import evaluate
 import src.visualizer as vis
 
-best_fitness = -99999
+best_fitness = -math.inf
 
 
-def f(solution):
+def error(solution):
     global best_fitness
 
     if random() < 0.02:
@@ -39,7 +39,7 @@ algorithm_param = {'max_num_iteration': 3000,
                    'crossover_type': 'uniform',
                    'max_iteration_without_improv': None}
 
-model = ga(function=f,
+model = ga(function=error,
            dimension=6,
            variable_type='real',
            variable_boundaries=varbound,
