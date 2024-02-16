@@ -80,3 +80,4 @@ class ElytraEmulator:
 
         self.velocity = vec3d5 * Vec3(0.99, 0.98, 0.99)
         self.position += self.velocity
+
